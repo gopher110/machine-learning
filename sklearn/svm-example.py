@@ -2,7 +2,7 @@ from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn import svm
 from sklearn.metrics import accuracy_score
-import numpy as np
+from joblib import dump, load
 
 # sk learn 自带一些经典数据集 iris,digits,boston house price
 # Iris数据集是常用的分类实验数据集，由Fisher, 1936收集整理。Iris也称鸢尾花卉数据集，是一类多重变量分析的数据集。数据集包含150个数据样本，分为3类，
@@ -32,7 +32,11 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 model = svm.SVC()
 model.fit(X_train, y_train)
 
-predictions = model.predict(X_test)
+filename = 'svm-example.sav'
+dump(model, filename)
+svmExampleModel = load(filename)
+
+predictions = svmExampleModel.predict(X_test)
 acc = accuracy_score(y_test, predictions)
 
 print("prediction: ", predictions)
