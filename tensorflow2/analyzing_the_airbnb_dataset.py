@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 import warnings
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -30,51 +31,53 @@ y_train, y_test = targets.values[:train_size], targets.values[train_size:]
 
 print(len(X_train[0]))
 
-
 # data visualization and analysis
-
-
+# sns.pairplot(data)
+corr = data.corr()
+cmap =sns.diverging_palette(250, 10, as_cmap=True)
+plt.figure(figsize=(8, 8))
+sns.heatmap(corr, square=True, cmap=cmap, annot=True)
+plt.show()
 # the Tensorflow2 machine learning approaches
-
-# Linear Regrasseion
-class LinerModel:
-    def __init__(self):
-        # y_pred = W*x + b
-        self.initializer = tf.keras.initializers.GlorotUniform()
-
-    def loss(self, y, y_pred):
-        return tf.reduce_mean(tf.abs(y-y_pred))   #
-
-    def train(self, X, y, lr=0.00001, epochs=20, verbose=True):
-        X = np.asarray(X, dtype=np.float32)
-        y = np.asarray(y, dtype=np.float32).reshape((-1, 1))  # 自动计算行数 列数为1
-
-        self.W = tf.Variable(
-            initial_value=self.initializer(shape=(len(X[0]), 1), dtype='float32'))
-        self.b = tf.Variable(
-            initial_value=self.initializer(shape=(1,), dtype='float32'))
-
-        def train_step():
-            with tf.GradientTape() as t:
-                current_loss = self.loss(y, self.predict(X))
-
-            dW, db = t.gradient(current_loss, [self.W, self.b])
-            self.W.assign_sub(lr * dW)  # W -= lr* dw
-            self.b.assign_sub(lr * db)
-            return current_loss
-
-        for epoch in range(epochs):
-            current_loss = train_step()
-            if verbose:
-                print(f'Epoch:{epoch} \nLoss:{current_loss.numpy()}')
-
-    def predict(self, X):
-        # [a, b]* [b, c]
-        # x -> [n_instances, n_features] [n_feature, 1]
-        return tf.matmul(X, self.W)+self.b
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(128, activation='relu'),  # 0 or x:_____/
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(1)
+])
 
 
-model = LinerModel()
-model.train(X_train, y_train, epochs=100)
+def R_squared(y_true,y_pred):
+    residual = tf.reduce_sum(tf.square(y_true - y_pred))
+    total = tf.reduce_sum(tf.square(y_true - tf.reduce_mean(y_true)))
+    r2 = 1.0 - residual / total
+    return r2
+
+
+adam_optimizer = tf.keras.optimizers.Adam()
+loss_fn = tf.keras.losses.MAE
+model.compile(
+    optimizer=adam_optimizer,
+    loss=loss_fn,
+    metrics=[tf.keras.metrics.MAE,
+             tf.keras.metrics.MSE,
+             R_squared,  # -1 and 1 /  <0 ==> useless 0 and 1 ==> better close to 1
+             ]
+)
+model.fit(X_train, y_train, epochs=10)
+model.save('./my ann.h5')
+loaded_model = tf.keras.models.load_model('./my ann.h5', custom_objects={"R_squared": R_squared})
+print(loaded_model.summary())
+print(loaded_model.evaluate(X_test, y_test))
+print(loaded_model(X_test[:2]))
+print(y_test[:2])
+
 # conclusions
+"""
+Sometimes the data set limits us WRT to results
+Data preprocessing and analysis is important Tensorflow does not live in a bubble,it's a tool
+TF 2 simplifies many things: no more placeholders,eager execution,.numpy(),no more sessions,Keras has a bigger role
+ANNs are very sensitive to hyperparameter choice
+running on GPU can help,but it's not a must
+"""
+
 
